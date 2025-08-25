@@ -1,86 +1,108 @@
-/* eslint-disable no-unused-vars */
-import { useEffect, useState } from "react";
-import { AppBar, Toolbar, Button, Box, Typography } from "@mui/material";
-import { Link } from "react-router-dom";
-import { auth, logout } from "../firebase"; // centralized logout
+import { useState } from "react";
+import {
+  AppBar,
+  Toolbar,
+  Typography,
+  Button,
+  Box,
+  IconButton,
+  Drawer,
+  List,
+  ListItem,
+  ListItemText,
+  Divider,
+} from "@mui/material";
+import MenuIcon from "@mui/icons-material/Menu";
+import { Link, useNavigate } from "react-router-dom";
+import { logout } from "../firebase";
 
 export default function Navbar() {
-  const [user, setUser] = useState(null);
+  const navigate = useNavigate();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Watch auth state
-  useEffect(() => {
-    const unsub = auth.onAuthStateChanged(setUser);
-    return () => unsub();
-  }, []);
+  const handleLogout = () => {
+    localStorage.removeItem("demoUser"); // ✅ clear demo
+    logout(); // ✅ firebase logout
+    navigate("/login");
+  };
 
-  // Navigation links config
   const navLinks = [
-    { label: "Expenses", path: "/expenses" },
-    { label: "Sales", path: "/sales" },
     { label: "Summary", path: "/summary" },
+    { label: "Sales", path: "/sales" },
+    { label: "Expenses", path: "/expenses" },
   ];
 
-  return (
-    <AppBar position="static" sx={{ bgcolor: "#0A2342" }}>
-      <Toolbar
-        sx={{
-          display: "flex",
-          flexDirection: { xs: "column", md: "row" }, // stacked on mobile
-          alignItems: { xs: "center", md: "center" },
-          justifyContent: "space-between",
-          gap: { xs: 1, md: 2 },
-          px: { xs: 2, md: 4 },
-          py: { xs: 1, md: 2 },
-        }}
-      >
-        {/* Navigation Links */}
-   <Box
-  sx={{
-    display: "flex",
-    flexDirection: "row", // always row
-    gap: { xs: 1, md: 2 }, // smaller gap on mobile
-    alignItems: "center",
-    justifyContent: "center",
-    flexWrap: "wrap", // allow wrapping on small screens if too wide
-  }}
->
-  {navLinks.map(({ label, path }) => (
-    <Button
-      key={path}
-      component={Link}
-      to={path}
-      sx={{
-        color: "#FFCC00",
-        fontWeight: "bold",
-        textTransform: "none",
-        fontSize: { xs: "0.8rem", md: "1rem" }, // smaller text on mobile
-      }}
+  const drawer = (
+    <Box
+      sx={{ width: 240, bgcolor: "#0A2342", height: "100%", color: "#FFCC00" }}
+      onClick={() => setMobileOpen(false)}
     >
-      {label}
-    </Button>
-  ))}
-</Box>
-
-
-        {/* User Info + Logout */}
-        {user && (
-          <Box
+      <Typography
+        variant="h6"
+        sx={{ my: 2, textAlign: "center", fontWeight: "bold", color: "#FFCC00" }}
+      >
+        ZENTRO
+      </Typography>
+      <Divider sx={{ bgcolor: "#FFCC00" }} />
+      <List>
+        {navLinks.map(({ label, path }) => (
+          <ListItem
+            button
+            key={path}
+            component={Link}
+            to={path}
             sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 1,
-              mt: { xs: 1, md: 0 }, // push down on mobile
+              "&:hover": { bgcolor: "#132F55" },
             }}
           >
-            <Typography sx={{ color: "#FFCC00", fontWeight: "bold" }}>
-              {user.email}
-            </Typography>
+            <ListItemText primary={label} />
+          </ListItem>
+        ))}
+        <ListItem
+          button
+          onClick={handleLogout}
+          sx={{
+            "&:hover": { bgcolor: "#132F55" },
+          }}
+        >
+          <ListItemText primary="Logout" />
+        </ListItem>
+      </List>
+    </Box>
+  );
+
+  return (
+    <>
+      <AppBar position="static" sx={{ bgcolor: "#0A2342" }}>
+        <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
+          {/* Brand */}
+          <Typography
+            variant="h6"
+            sx={{ fontWeight: "bold", color: "#FFCC00" }}
+          >
+            ZENTRO Dashboard
+          </Typography>
+
+          {/* Desktop links */}
+          <Box sx={{ display: { xs: "none", md: "flex" }, gap: 2 }}>
+            {navLinks.map(({ label, path }) => (
+              <Button
+                key={path}
+                component={Link}
+                to={path}
+                sx={{
+                  color: "#FFCC00",
+                  fontWeight: "bold",
+                  textTransform: "none",
+                }}
+              >
+                {label}
+              </Button>
+            ))}
             <Button
-              onClick={logout}
-              variant="contained"
-              color="secondary"
+              onClick={handleLogout}
               sx={{
-                color: "#0A2342",
+                color: "#fff",
                 fontWeight: "bold",
                 textTransform: "none",
               }}
@@ -88,8 +110,29 @@ export default function Navbar() {
               Logout
             </Button>
           </Box>
-        )}
-      </Toolbar>
-    </AppBar>
+
+          {/* Mobile menu button */}
+          <IconButton
+            edge="end"
+            color="inherit"
+            aria-label="menu"
+            onClick={() => setMobileOpen(true)}
+            sx={{ display: { xs: "flex", md: "none" }, color: "#FFCC00" }}
+          >
+            <MenuIcon />
+          </IconButton>
+        </Toolbar>
+      </AppBar>
+
+      {/* Drawer for mobile */}
+      <Drawer
+        anchor="right"
+        open={mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        ModalProps={{ keepMounted: true }}
+      >
+        {drawer}
+      </Drawer>
+    </>
   );
 }

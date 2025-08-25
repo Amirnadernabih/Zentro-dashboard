@@ -1,77 +1,164 @@
-/* eslint-disable no-unused-vars */
-import { useEffect, useState } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from "react-router-dom";
-import { auth } from "./firebase";
-import { onAuthStateChanged, signOut } from "firebase/auth";
-import Navbar from "./components/Navbar";
-import Expenses from "./pages/Expenses";
-import Sales from "./pages/Sales";
-import Summary from "./pages/Summary";
-import SplashScreen from "./components/SplashScreen";
-import Login from "./pages/Login"; 
+import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom"
+import { useEffect, useState } from "react"
+import { auth, logout } from "./firebase"
+import { onAuthStateChanged } from "firebase/auth"
+import {
+  AppBar,
+  Toolbar,
+  Button,
+  Box,
+  Typography,
+  IconButton,
+  Drawer,
+  List,
+  ListItem,
+  ListItemText,
+  Divider,
+} from "@mui/material"
+import MenuIcon from "@mui/icons-material/Menu"
 
-function AppContent() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [showSplash, setShowSplash] = useState(true);
-
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-      setLoading(false);
-    });
-    return () => unsub();
-  }, []);
-
-  // Splash delay (e.g., 2 seconds)
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowSplash(false);
-    }, 2000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  if (showSplash || loading) {
-    return <SplashScreen />;
-  }
-
-  return (
-    <Routes>
-      {/* Login route */}
-      <Route path="/login" element={<Login />} />
-
-      {/* Protected routes */}
-      <Route
-        path="/*"
-        element={
-          user ? (
-            <>
-              <Navbar onLogout={() => signOut(auth)} />
-              <Routes>
-                <Route path="/expenses" element={<Expenses />} />
-                <Route path="/sales" element={<Sales />} />
-                <Route path="/summary" element={<Summary />} />
-                <Route path="*" element={<Navigate to="/summary" />} />
-              </Routes>
-            </>
-          ) : (
-            <Navigate to="/login" replace />
-          )
-        }
-      />
-
-      {/* Default route after splash */}
-      <Route path="*" element={<Navigate to={user ? "/summary" : "/login"} replace />} />
-    </Routes>
-  );
-}
+import Summary from "./pages/Summary"
+import Sales from "./pages/Sales"
+import Expenses from "./pages/Expenses"
+import Login from "./pages/Login"
 
 export default function App() {
+  const [user, setUser] = useState(null)
+  const [demoUser, setDemoUser] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u)
+      if (!u) setDemoUser(false)
+    })
+    return () => unsub()
+  }, [])
+
+  const navLinks = [
+    { label: "Summary", path: "/" },
+    { label: "Sales", path: "/sales" },
+    { label: "Expenses", path: "/expenses" },
+  ]
+
+  const handleLogout = () => {
+    if (demoUser) {
+      setDemoUser(false)
+      setUser(null)
+    } else {
+      logout()
+    }
+  }
+
+  const drawer = (
+    <Box
+      sx={{ width: 240, bgcolor: "#0A2342", height: "100%", color: "#FFCC00" }}
+      onClick={() => setMobileOpen(false)}
+    >
+      <Typography
+        variant="h6"
+        sx={{ my: 2, textAlign: "center", fontWeight: "bold" }}
+      >
+        ZENTRO
+      </Typography>
+      <Divider sx={{ bgcolor: "#FFCC00" }} />
+      <List>
+        {navLinks.map(({ label, path }) => (
+          <ListItem
+            button
+            key={path}
+            component={Link}
+            to={path}
+            sx={{ "&:hover": { bgcolor: "#132F55" } }}
+          >
+            <ListItemText primary={label} />
+          </ListItem>
+        ))}
+        <ListItem button onClick={handleLogout} sx={{ "&:hover": { bgcolor: "#132F55" } }}>
+          <ListItemText primary="Logout" />
+        </ListItem>
+      </List>
+    </Box>
+  )
+
   return (
     <Router>
-      <AppContent />
+      {(user || demoUser) && (
+        <>
+          <AppBar position="static" sx={{ bgcolor: "#0A2342" }}>
+            <Toolbar sx={{ display: "flex", justifyContent: "space-between" }}>
+              {/* Brand */}
+              <Typography variant="h6" sx={{ fontWeight: "bold", color: "#FFCC00" }}>
+                ZENTRO Dashboard
+              </Typography>
+
+              {/* Desktop Links */}
+              <Box sx={{ display: { xs: "none", md: "flex" }, gap: 2 }}>
+                {navLinks.map(({ label, path }) => (
+                  <Button
+                    key={path}
+                    component={Link}
+                    to={path}
+                    sx={{
+                      color: "#FFCC00",
+                      fontWeight: "bold",
+                      textTransform: "none",
+                    }}
+                  >
+                    {label}
+                  </Button>
+                ))}
+                <Button
+                  onClick={handleLogout}
+                  sx={{
+                    color: "#fff",
+                    fontWeight: "bold",
+                    textTransform: "none",
+                  }}
+                >
+                  Logout
+                </Button>
+              </Box>
+
+              {/* Mobile Hamburger */}
+              <IconButton
+                edge="end"
+                color="inherit"
+                aria-label="menu"
+                onClick={() => setMobileOpen(true)}
+                sx={{ display: { xs: "flex", md: "none" }, color: "#FFCC00" }}
+              >
+                <MenuIcon />
+              </IconButton>
+            </Toolbar>
+          </AppBar>
+
+          {/* Drawer for mobile */}
+          <Drawer
+            anchor="right"
+            open={mobileOpen}
+            onClose={() => setMobileOpen(false)}
+            ModalProps={{ keepMounted: true }}
+          >
+            {drawer}
+          </Drawer>
+        </>
+      )}
+
+      <Routes>
+        {(user || demoUser) ? (
+          <>
+            <Route path="/" element={<Summary demoUser={demoUser} />} />
+            <Route path="/sales" element={<Sales demoUser={demoUser} />} />
+            <Route path="/expenses" element={<Expenses demoUser={demoUser} />} />
+          </>
+        ) : (
+          <Route
+            path="*"
+            element={<Login setUser={setUser} setDemoUser={setDemoUser} />}
+          />
+        )}
+      </Routes>
     </Router>
-  );
+  )
 }
